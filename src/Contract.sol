@@ -31,8 +31,12 @@ contract Vault is ReentrancyGuard {
         weth = IWETH(_wethAddress);
     }
 
+    // Need to implement receive() and fallback() like this to interact with WETH contract
+    receive() external payable {}
+    fallback() external payable {}
+
     // Deposit ETH to the vault
-    receive() external payable {
+    function depositETH() external payable {
         ethBalances[msg.sender] += msg.value;
         emit DepositETH(msg.sender, msg.value);
     }
@@ -77,5 +81,10 @@ contract Vault is ReentrancyGuard {
         weth.withdraw(_amount);
         ethBalances[msg.sender] += _amount;
         emit UnwrappedWETH(msg.sender, _amount);
+    }
+
+    // Function to retrieve a user's balance for a specific token
+    function getTokenBalance(address token, address user) public view returns (uint256) {
+      return tokenBalances[token][user];
     }
 }
