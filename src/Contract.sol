@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 interface IWETH is IERC20 {
     function deposit() external payable;
@@ -16,7 +16,7 @@ contract Vault is ReentrancyGuard {
 
     // Mapping from user addresses to their ETH and ERC20 token balances
     mapping(address => uint256) public ethBalances;
-    mapping(address => mapping(address => uint256)) public tokenBalances;
+    mapping(address => mapping(address => uint256)) private tokenBalances;
 
     // Event declarations
     event DepositETH(address indexed user, uint256 amount);
@@ -85,6 +85,6 @@ contract Vault is ReentrancyGuard {
 
     // Function to retrieve a user's balance for a specific token
     function getTokenBalance(address token, address user) public view returns (uint256) {
-      return tokenBalances[token][user];
+        return tokenBalances[token][user];
     }
 }

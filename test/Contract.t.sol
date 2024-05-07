@@ -3,8 +3,9 @@ pragma solidity ^0.8.25;
 
 import "forge-std/Test.sol";
 import "src/Contract.sol";
-import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
+
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
 contract VaultTest is Test {
     Vault vault;

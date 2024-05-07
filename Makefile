@@ -21,6 +21,7 @@ FUNDING_AMOUNT:="2.035 ether"
 WITHDRAW_AMOUNT:="1.035 ether"
 WRAP_AMOUNT:="0.5 ether"
 UNWRAP_AMOUNT:=500000000000000000
+ERC20_TOKEN_AMOUNT:=3000000000000000000000000
 
 PEPE_CONTRACT_ADDRESS:=0x6982508145454Ce325dDbE47a25d4ec3d2311933
 PEPE_WHALE_ADDRESS:=0xF977814e90dA44bFA03b6295A0616a897441aceC
@@ -38,67 +39,71 @@ print_anvil_wallet_private_key:
 	@echo ${ANVIL_WALLET_PRIVATE_KEY}
 
 anvil_create_contract:
-	forge create --constructor-args ${WETH_CONTRACT_ADDRESS} -r ${ANVIL_RPC} --optimize --private-key ${ANVIL_WALLET_PRIVATE_KEY} --json src/Contract.sol:Vault | jq -r '.deployedTo' | cat > secrets/anvil_contract_address.txt
+	@forge create --constructor-args ${WETH_CONTRACT_ADDRESS} -r ${ANVIL_RPC} --optimize --private-key ${ANVIL_WALLET_PRIVATE_KEY} --json src/Contract.sol:Vault | jq -r '.deployedTo' | cat > secrets/anvil_contract_address.txt
 
-anvil_fund_vault:
-	cast send --value ${FUNDING_AMOUNT} -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "depositETH()" --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
+anvil_deposit_eth:
+	@cast send --value ${FUNDING_AMOUNT} -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "depositETH()" --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
 
 anvil_withdraw_eth:
 	cast send -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "withdrawETH(uint256)" ${WITHDRAW_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
 
 anvil_get_vault_balance_on_weth_contract:
-	cast call -r ${ANVIL_RPC} ${WETH_CONTRACT_ADDRESS} "balanceOf(address)(uint256)" ${ANVIL_CONTRACT_ADDRESS}
+	@cast call -r ${ANVIL_RPC} ${WETH_CONTRACT_ADDRESS} "balanceOf(address)(uint256)" ${ANVIL_CONTRACT_ADDRESS}
 
 anvil_get_eth_balance:
 	@result=`cast call -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "ethBalances(address)" ${ANVIL_WALLET}`; cast to-unit $$result ether;
 
 anvil_wrap_eth:
-	cast send -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "wrapETH(uint256)" ${WRAP_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
+	@cast send -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "wrapETH(uint256)" ${WRAP_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
 
 anvil_unwrap_weth:
-	cast send -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "unwrapWETH(uint256)" ${WRAP_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
+	@cast send -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "unwrapWETH(uint256)" ${WRAP_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
 
 anvil_get_weth_balance:
-	@result=`cast call -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "getTokenBalance(address, address)" ${WETH_CONTRACT_ADDRESS} ${ANVIL_WALLET}  --from ${ANVIL_WALLET}`; cast to-unit $$result;
+	@result=`cast call -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "getTokenBalance(address, address)" ${WETH_CONTRACT_ADDRESS} ${ANVIL_WALLET}  --from ${ANVIL_WALLET}`; cast to-unit $$result ether;
 
 anvil_setup_dai_in_wallet:
-	cast rpc anvil_impersonateAccount ${DAI_HOST}
-	cast send ${DAI} --from ${DAI_HOST} "transfer(address,uint256)(bool)" ${ANVIL_WALLET} 300000000000000000000000 --unlocked
-	cast rpc anvil_impersonateAccount ${DAI_HOST}
-	cast send ${DAI} --from ${ANVIL_WALLET} "approve(address,uint256)(bool)" ${ANVIL_CONTRACT_ADDRESS} 300000000000000000000000 --unlocked
+	@cast rpc anvil_impersonateAccount ${DAI_HOST}
+	@cast send ${DAI} --from ${DAI_HOST} "transfer(address,uint256)(bool)" ${ANVIL_WALLET} ${ERC20_TOKEN_AMOUNT} --unlocked
+	@cast send ${DAI} --from ${ANVIL_WALLET} "approve(address,uint256)(bool)" ${ANVIL_CONTRACT_ADDRESS} ${ERC20_TOKEN_AMOUNT} --unlocked
 
 anvil_get_dai_wallet_balance:
-	cast call ${DAI} "balanceOf(address)(uint256)" ${ANVIL_WALLET}
+	@cast call ${DAI} "balanceOf(address)(uint256)" ${ANVIL_WALLET}
 
 anvil_deposit_dai:
-	cast send -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "depositTokens(address, uint256)" ${DAI} 3 --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
+	@cast send -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "depositTokens(address, uint256)" ${DAI} ${ERC20_TOKEN_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
+
+anvil_withdraw_dai:
+	@cast send -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "withdrawTokens(address, uint256)" ${DAI} ${ERC20_TOKEN_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
 
 anvil_get_dai_balance:
 	@result=`cast call -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "getTokenBalance(address, address)" ${DAI} ${ANVIL_WALLET}  --from ${ANVIL_WALLET}`; cast to-unit $$result;
 
 anvil_setup_pepe_in_wallet:
-	cast rpc anvil_impersonateAccount ${PEPE_WHALE_ADDRESS}
-	cast send ${PEPE_CONTRACT_ADDRESS} --from ${PEPE_WHALE_ADDRESS} "transfer(address,uint256)(bool)" ${ANVIL_WALLET} 300000000000000000000000 --unlocked
-	cast rpc anvil_impersonateAccount ${PEPE_WHALE_ADDRESS}
-	cast send ${PEPE_CONTRACT_ADDRESS} --from ${ANVIL_WALLET} "approve(address,uint256)(bool)" ${ANVIL_CONTRACT_ADDRESS} 300000000000000000000000 --unlocked
+	@cast rpc anvil_impersonateAccount ${PEPE_WHALE_ADDRESS}
+	@cast send ${PEPE_CONTRACT_ADDRESS} --from ${PEPE_WHALE_ADDRESS} "transfer(address,uint256)(bool)" ${ANVIL_WALLET} ${ERC20_TOKEN_AMOUNT} --unlocked
+	@cast send ${PEPE_CONTRACT_ADDRESS} --from ${ANVIL_WALLET} "approve(address,uint256)(bool)" ${ANVIL_CONTRACT_ADDRESS} ${ERC20_TOKEN_AMOUNT} --unlocked
 
 anvil_get_pepe_wallet_balance:
-	cast call ${PEPE_CONTRACT_ADDRESS} "balanceOf(address)(uint256)" ${ANVIL_WALLET}
+	@cast call ${PEPE_CONTRACT_ADDRESS} "balanceOf(address)(uint256)" ${ANVIL_WALLET}
 
 anvil_deposit_pepe:
-	cast send -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "depositTokens(address, uint256)" ${PEPE_CONTRACT_ADDRESS} 300000000000000000000000 --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
+	@cast send -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "depositTokens(address, uint256)" ${PEPE_CONTRACT_ADDRESS} ${ERC20_TOKEN_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
+
+anvil_withdraw_pepe:
+	@cast send -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "withdrawTokens(address, uint256)" ${PEPE_CONTRACT_ADDRESS} ${ERC20_TOKEN_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
 
 anvil_get_pepe_balance:
 	@result=`cast call -r ${ANVIL_RPC} ${ANVIL_CONTRACT_ADDRESS} "getTokenBalance(address, address)" ${PEPE_CONTRACT_ADDRESS} ${ANVIL_WALLET}  --from ${ANVIL_WALLET}`; cast to-unit $$result;
 
 anvil_deposit_weth_direct:
-	cast send --value ${WRAP_AMOUNT} -r ${ANVIL_RPC} ${WETH_CONTRACT_ADDRESS} "deposit(uint256)" ${WRAP_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
+	@cast send --value ${WRAP_AMOUNT} -r ${ANVIL_RPC} ${WETH_CONTRACT_ADDRESS} "deposit(uint256)" ${WRAP_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
 
 anvil_get_weth_balance_direct:
-	cast call -r ${ANVIL_RPC} ${WETH_CONTRACT_ADDRESS} "balanceOf(address)(uint256)" ${ANVIL_WALLET}
+	@cast call -r ${ANVIL_RPC} ${WETH_CONTRACT_ADDRESS} "balanceOf(address)(uint256)" ${ANVIL_WALLET}
 
 anvil_withdraw_weth_direct:
-	cast send -r ${ANVIL_RPC} ${WETH_CONTRACT_ADDRESS} "withdraw(uint256)" ${WRAP_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
+	@cast send -r ${ANVIL_RPC} ${WETH_CONTRACT_ADDRESS} "withdraw(uint256)" ${WRAP_AMOUNT} --from ${ANVIL_WALLET} --private-key ${ANVIL_WALLET_PRIVATE_KEY}
 
 estimate_gas_cost_contract_creation:
 	@cast estimate --create $$(forge inspect src/Contract.sol:Vault bytecode)
